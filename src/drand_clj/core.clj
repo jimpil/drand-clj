@@ -2,7 +2,8 @@
   (:require [drand-clj
              [client :as client]
              [impl   :as impl]
-             [urls   :as urls]]))
+             [urls   :as urls]]
+            [clojure.core.memoize :as memoize]))
 
 (defonce loe-group ;; league of entropy
   [urls/cloudflare
@@ -58,6 +59,37 @@
   [drand-client instant]
   (impl/roundAt drand-client instant))
 
+
+(defn with-caching
+  "Returns a TTL (time-to-live) cached version of `(partial <f> <drand-client>)`,
+   with a :ttl/threshold equal to the client's period (calculated from its info).
+   The very first call will block until the 'next refresh', which could be up to
+   `(dec period)` seconds. After that, there is no delay.
+
+   Example use-case:
+   Define a synchronous/caller-driven version of `entropy-watch`
+
+   (def get-entropy-cached
+     (with-caching <the-client> get-entropy))
+
+   (def process-entropy
+     (comp consume! ;; the same callback you would pass to `entropy-watch`
+           get-entropy-cached))
+
+    ;; the following will delay/block on the first call
+    ;; just like `entropy-watch` schedules with an initial delay
+    (process-entropy)"
+  [drand-client f]
+  (let [{:strs [genesis_time period]} @(get-info drand-client)
+        initial-dlay (promise)
+        delay-wrapped (fn [& args]
+                        (when-not (realized? initial-dlay)
+                          (let [dlay (impl/next-round-in genesis_time period)]
+                            (deliver initial-dlay dlay)
+                            (Thread/sleep (* 1000 dlay))))
+                        (apply f drand-client args))]
+    (memoize/ttl delay-wrapped :ttl/threshold (* 1000 period))))
+
 (defmacro with-http-client
   "Helper macro for overriding the default http-client."
   [http-client & body]
@@ -74,5 +106,12 @@
   (def unwatch!
     (entropy-watch client #(println (ZonedDateTime/now) ":" (seq %))))
   (unwatch!) ;; => true
+
+  (def cached-entropy
+    (with-caching client get-entropy))
+
+  (def process-entropy
+    (comp #(println (ZonedDateTime/now) ":" (seq %))
+          cached-entropy))
 
   )

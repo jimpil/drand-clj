@@ -50,17 +50,18 @@
                           (apply [_ resp]
                             (let [^HttpResponse resp resp]
                               (if (= 200 (.statusCode resp))
-                                (-> resp .body json/read-str)
+                                (.body resp)
                                 ::fail)))))
            (.exceptionally (reify Function
                              (apply [_ resp]
-                               (let [^Throwable resp resp]
-                                 (if (instance? HttpTimeoutException resp)
-                                   ::http-timeout
-                                   resp)))))
+                               (if (instance? HttpTimeoutException resp)
+                                 ::http-timeout
+                                 resp))))
            (.thenAccept (reify Consumer
                           (accept [_ body]
-                            (handle-response! body))))
+                            (cond-> body
+                                    (string? body) json/read-str
+                                    true handle-response!))))
            .join)
        (.send client r (HttpResponse$BodyHandlers/ofString))))))
 
