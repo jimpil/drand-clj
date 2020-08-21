@@ -61,7 +61,7 @@
 
 ;;=================================================================
 
-(defn- from-any
+(defn- fastest-query
   "Asynchronously queries all <urls> (via <api-fn>),
    delivering the first (fastest) response into the promise returned.
    If <timeout-seconds> is exceeded returns `::timeout`."
@@ -86,45 +86,25 @@
 
     ret-promise))
 
-(defn- binding-conveyor-fn*
-  [f] ;; copied from clojure.core because it's private :(
-  (let [frame (Var/cloneThreadBindingFrame)]
-    (fn
-      ([]
-       (Var/resetThreadBindingFrame frame)
-       (f))
-      ([x]
-       (Var/resetThreadBindingFrame frame)
-       (f x))
-      ([x y]
-       (Var/resetThreadBindingFrame frame)
-       (f x y))
-      ([x y z]
-       (Var/resetThreadBindingFrame frame)
-       (f x y z))
-      ([x y z & args]
-       (Var/resetThreadBindingFrame frame)
-       (apply f x y z args)))))
-
 (defrecord DrandGroupClient
-  [group-urls group-hash chain-hash timeout-seconds]
+  [group-urls group-info timeout-seconds]
 
   impl/IDrand
   (info [_]
-    (from-any group-urls timeout-seconds get-info))
+    (fastest-query group-urls timeout-seconds get-info))
   (getPublicRound [_ round]
-    (from-any group-urls timeout-seconds (partial get-public-round round)))
-  (roundAt [this instant]
-    (let [{:strs [genesis_time period]} @(impl/info this)]
+    (fastest-query group-urls timeout-seconds (partial get-public-round round)))
+  (roundAt [_ instant]
+    (let [{:strs [genesis_time period]} group-info]
       (impl/round-at instant genesis_time period)))
   (entropyAt [this round]
     (-> (impl/getPublicRound this round)
         deref
         impl/find-randomness))
   (entropyWatch [this consume!]
-    (let [{:strs [genesis_time period]} @(impl/info this)
-          callback (binding-conveyor-fn* ;; propagate bindings
-                     #(consume! (impl/entropyAt this nil)))
+    (let [{:strs [genesis_time period]} group-info
+          callback (bound-fn [] ;; propagate bindings
+                     (consume! (impl/entropyAt this nil)))
           dlay (impl/next-round-in genesis_time period)]
       (partial future-cancel
                (-> (Executors/newSingleThreadScheduledExecutor)
@@ -135,15 +115,8 @@
   "Returns a new drand client given the provided
    group <urls> and <timeout-seconds>."
   [urls timeout-seconds]
-  (let [group-info   (map #(deref (get-info :url % :timeout-seconds timeout-seconds)) urls)
-        group-hashes (map #(get % "groupHash") group-info)
-        chain-hashes (map #(get % "hash")  group-info)]
-
-    (assert (apply = group-hashes) "Invalid group-hash detected!")
-    (assert (apply = chain-hashes) "Invalid chain-hash detected!")
-
-    (DrandGroupClient.
-      urls
-      (first group-hashes)
-      (first chain-hashes)
-      timeout-seconds)))
+  (let [group-info (map #(deref (get-info :url % :timeout-seconds timeout-seconds)) urls)]
+    (if (apply not= group-info)
+      (throw
+        (IllegalStateException. "Invalid group-info detected!"))
+      (DrandGroupClient. urls (first group-info) timeout-seconds))))

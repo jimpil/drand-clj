@@ -5,7 +5,7 @@
              [urls   :as urls]]
             [clojure.core.memoize :as memoize]))
 
-(defonce loe-group ;; league of entropy
+(defonce loe-group ;; league-of-entropy
   [urls/cloudflare
    urls/protocol-labs1
    urls/protocol-labs2
@@ -31,7 +31,9 @@
 
 (defn get-public
   "Queries the /public/<round> api of this client's group.
-   Returns a promise."
+   Returns a promise. You typically don't need to call this
+   as the info never changes, and has already been fetched -
+   use `(:group-info drand-client)` instead."
   ([drand-client]
    (get-public drand-client 0))
   ([drand-client round]
@@ -80,7 +82,7 @@
     ;; just like `entropy-watch` schedules with an initial delay
     (process-entropy)"
   [drand-client f]
-  (let [{:strs [genesis_time period]} @(get-info drand-client)
+  (let [{:strs [genesis_time period]} (:group-info drand-client)
         initial-dlay (promise)
         delay-wrapped (fn [& args]
                         (when-not (realized? initial-dlay)
@@ -99,7 +101,7 @@
 (comment
   (def client (client-for))
   ;; use the client
-  @(get-info client)
+  @(get-info client) ;; same as `(:group-info client)`
   @(get-public client 51)
   @(get-public client)
   (round-at client (Instant/now))
