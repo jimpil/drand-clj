@@ -5,7 +5,7 @@ A Clojure client for the [drand](https://drand.love/) HTTP API.
 
 ## Where
 
-todo
+[![Clojars Project](https://clojars.org/drand-clj/latest-version.svg)](https://clojars.org/drand-clj)
 
 ## Usage
 
