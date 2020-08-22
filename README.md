@@ -45,7 +45,7 @@ Queries the `/public/<round>` endpoint of each beacon returning the fastest resp
 
 #### _get-entropy_ \[client round\]
 Builds on top of `get-public`, extracting the hex-encoded randomness, and decoding it. `round` defaults to the latest round.
-Unlike most of the functions in this namespace, this is synchronous.
+Unlike most of the functions in this namespace, this is synchronous. Returns a byte-array of 32 elements.
 
 ```clj
 (drand/get-entropy loe-client) ;; => byte-array (32 elements)
@@ -95,6 +95,14 @@ understanding of course that those calls will return identical values (depending
 
 #### _with-http-client_ \[http-client & body\]
 Convenience macro for overriding the default http-client (i.e. `(HttpClient/newHttpClient)`).
+
+#### _strong-random_ \[entropy\]
+Returns the strongest possible instance of `SecureRandom` (on the running platform) 
+with 32 bytes of _added_ <entropy> (supplementing its own seed).
+
+```clj
+(drand/strong-random (drand/get-entropy loe-client)) ;; => #object[java.security.SecureRandom 0x680f108e "Blocking"]
+```
 
 ## Requirements
 - Some recent version of Java (>= 11)

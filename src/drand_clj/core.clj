@@ -1,9 +1,10 @@
 (ns drand-clj.core
   (:require [drand-clj
              [client :as client]
-             [impl   :as impl]
-             [urls   :as urls]]
-            [clojure.core.memoize :as memoize]))
+             [impl :as impl]
+             [urls :as urls]]
+            [clojure.core.memoize :as memoize])
+  (:import (java.security SecureRandom)))
 
 (defonce loe-group ;; league-of-entropy
   [urls/cloudflare
@@ -56,8 +57,8 @@
   (impl/entropyWatch drand-client watch-fn!))
 
 (defn round-at
-  "Returns the round (a positive integer) at
-  <instant> (a `java.time.Instant`)."
+  "Returns the round of generated randomness
+  (a positive integer) at <instant> (a `java.time.Instant`)."
   [drand-client instant]
   (impl/roundAt drand-client instant))
 
@@ -78,8 +79,8 @@
      (comp consume! ;; the same callback you would pass to `entropy-watch`
            get-entropy-cached))
 
-    ;; the following will delay/block on the first call
-    ;; just like `entropy-watch` schedules with an initial delay
+    ;; the following will delay/block just like
+    ;; `entropy-watch` schedules with an initial delay
     (process-entropy)"
   [drand-client f]
   (let [{:strs [genesis_time period]} (:group-info drand-client)
@@ -98,6 +99,14 @@
   `(binding [impl/*http-client* ~http-client]
      ~@body))
 
+(defn strong-random
+  "Returns the strongest possible instance of `SecureRandom`
+   with 32 bytes of added <entropy> (supplementing its own seed)."
+  ^SecureRandom [^bytes entropy]
+  (doto (SecureRandom/getInstanceStrong)
+    (.nextInt)           ;; force self-seeding
+    (.setSeed entropy))) ;; add entropy
+
 (comment
   (def client (client-for))
   ;; use the client
@@ -105,15 +114,20 @@
   @(get-public client 51)
   @(get-public client)
   (round-at client (Instant/now))
+
+  (def consume-entropy!
+    #(println (ZonedDateTime/now) ":" (seq %)))
+
   (def unwatch!
-    (entropy-watch client #(println (ZonedDateTime/now) ":" (seq %))))
+    (entropy-watch client consume-entropy!))
   (unwatch!) ;; => true
 
   (def cached-entropy
     (with-caching client get-entropy))
 
   (def process-entropy
-    (comp #(println (ZonedDateTime/now) ":" (seq %))
-          cached-entropy))
+    (comp consume-entropy! cached-entropy))
+
+  (strong-random (get-entropy client))
 
   )
