@@ -1,4 +1,4 @@
-(defproject drand-clj "0.2.0"
+(defproject drand-clj "0.2.1-SNAPSHOT"
   :description "Clojure http-client to the `drand` randomness beacon network."
   :url "https://github.com/jimpil/drand-clj"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
