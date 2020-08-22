@@ -45,10 +45,10 @@ Queries the `/public/<round>` endpoint of each beacon returning the fastest resp
 
 #### _get-entropy_ \[client round\]
 Builds on top of `get-public`, extracting the hex-encoded randomness, and decoding it. `round` defaults to the latest round.
-Unlike most of the functions in this namespace, this is synchronous. Returns a byte-array of 32 elements.
+Unlike most of the functions in this namespace, this returns a byte-array of 32 elements (not a `Promise`).
 
 ```clj
-(drand/get-entropy loe-client) ;; => byte-array (32 elements)
+(drand/get-entropy loe-client) ;; => byte-array
 ```
 
 #### _round-at_ \[client instant\]
@@ -72,7 +72,7 @@ Consumption does NOT start immediately, but on the next refresh, and every 'peri
 
 ```
 
-#### _with-caching_ \[client api-fn\]
+#### _with-ttl-caching_ \[client api-fn\]
 Memoizes <api-fn> in a TTL (time-to-live) fashion.
 The returned function will block on the very first call (waiting for the next refresh), 
 and start refreshing its cache every 'period' (see `get-info`) seconds thereafter.
@@ -106,10 +106,12 @@ with 32 bytes of added <entropy> (_supplementing its own seed_).
 
 ### drand-clj.client
 If for some reason you want a lower-level API that doesn't require a client object,
-this namespace will be useful. Functions like `get-info*`, `get-public*` and `get-public-round*`
-expect named arguments `:url`/`:timeout-seconds`. Bypassing the client object like this, obviously
-means no group-info validation (there is no group at this level - just a URL), 
-but also no `core.async` involvement (the promise will be delivered straight from the async http-handler).
+this namespace might be useful. Functions like `get-info*`, `get-public*` and `get-public-round*`
+expect named arguments `:url`/`:timeout-seconds` (defaulting to `Cloudflare`/`5`). 
+Bypassing the client object like this, obviously means no group-info validation 
+(there is no group at this level - just a URL), but also no `core.async` involvement 
+(the promise will be delivered straight from the async http-handler). 
+I guess these functions are the quickest/easiest way of testing/debugging/trying out individual urls.
 
 ## Requirements
 - Some recent version of Java (>= 11)

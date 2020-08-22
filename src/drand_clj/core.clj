@@ -64,9 +64,9 @@
   (impl/roundAt drand-client instant))
 
 
-(defn with-caching
+(defn with-ttl-caching
   "Returns a TTL (time-to-live) cached version of `(partial <f> <drand-client>)`,
-   with a :ttl/threshold equal to the client's period (calculated from its info).
+   with a :ttl/threshold equal to the client's period (taken from its info).
    The very first call will block until the 'next refresh', which could be up to
    `(dec period)` seconds. After that, there is no delay.
 
@@ -124,7 +124,7 @@
   (unwatch!) ;; => true
 
   (def cached-entropy
-    (with-caching client get-entropy))
+    (with-ttl-caching client get-entropy))
 
   (def process-entropy
     (comp consume-entropy! cached-entropy))

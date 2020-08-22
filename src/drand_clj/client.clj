@@ -19,7 +19,7 @@
       delay))
 
 (defn get-info*
-  "Top-level fn for retrieving `drand` beacon info."
+  "Retrieves `drand` beacon info from a single URL."
   [& {:keys [url timeout-seconds response-handler]}]
    (let [[ret-promise handler] (async-handler response-handler)]
      (impl/send-request!
@@ -61,7 +61,7 @@
 (defn- fastest-from
   "Asynchronously queries all <urls> (via <api-fn>),
    delivering the first (fastest) response into the promise returned.
-   If <timeout-seconds> is exceeded returns `::timeout`."
+   If <timeout-seconds> is exceeded delivers `::timeout`."
   [urls timeout-seconds api-fn]
   (let [[ret-chan http-chan] (repeatedly 2 async/promise-chan)
         ret-promise (promise)
@@ -110,7 +110,8 @@
   "Returns a new drand client given the provided
    group <urls> and <timeout-seconds>."
   [urls timeout-seconds]
-  (let [group-info (pmap #(deref (get-info* :url % :timeout-seconds timeout-seconds)) urls)]
-    (if (apply not= group-info)
-      (throw (IllegalStateException. "Invalid group-info detected!"))
-      (DrandGroupClient. urls (first group-info) timeout-seconds))))
+  (let [group-info (pmap #(deref (get-info* :url % :timeout-seconds timeout-seconds))
+                         urls)]
+    (if (apply = group-info)
+      (DrandGroupClient. urls (first group-info) timeout-seconds)
+      (throw (IllegalStateException. "Invalid group-info detected!")))))
