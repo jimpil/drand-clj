@@ -19,7 +19,8 @@ This is the top-level API for `drand-clj`. It is asynchronous all the way down, 
 #### _client-for_ \[urls timeout\]
 You will need a client object as the first argument to all the functions in this namespace.
 This function constructs one given a collection of group <urls>, and a timeout (in seconds - defaults to 5).
-If you haven't setup your own beacons, you can always use the LOE (League-Of-Entropy) ones (this is what the no-arg arity does). 
+If you haven't setup your own beacons, you can always use the LOE (League-Of-Entropy) ones 
+(this is what the no-arg arity does). 
 
 ```clj
 (def loe-client (drand/client-for)) 
@@ -28,14 +29,15 @@ You now have a client, and can start interacting with the `drand` beacons.
 Simply creating the client has verified that the urls can be reached, and that the hashes match. 
 
 #### _get-info_ \[client\]
-Queries the `/info` endpoint of each beacon returning the first result.
+Queries the `/info` endpoint of each beacon returning the fastest response. The same result can be obtained via 
+`(:group-info client)`.
 
 ```clj
 @(drand/get-info loe-client) ;; => map with keys ["public_key" "period" "genesis_time" "hash" "groupHash"]
 ```
 
 #### _get-public_ \[client round\]
-Queries the `/public/<round>` endpoint of each beacon returning the first result. `round` defaults to the latest round.
+Queries the `/public/<round>` endpoint of each beacon returning the fastest response. `round` defaults to the latest round.
 
 ```clj
 @(drand/get-public loe-client) ;; => map with keys ["round" "randomness" "signature" "previous_signature"]
@@ -71,7 +73,7 @@ Consumption does NOT start immediately, but on the next refresh, and every 'peri
 ```
 
 #### _with-caching_ \[client api-fn\]
-Memoizes <api-fn> in TTL (time-to-live) fashion.
+Memoizes <api-fn> in a TTL (time-to-live) fashion.
 The returned function will block on the very first call (waiting for the next refresh), 
 and start refreshing its cache every 'period' (see `get-info`) seconds thereafter.
 
@@ -83,16 +85,16 @@ You want to consume entropy, but you want to be the one who drives it (i.e. `ent
   (drand/with-caching loe-client drand/get-entropy))
 
 (def process-entropy
-  (comp #(println (ZonedDateTime/now) ":" (seq %)) ;; same consumer-fn we used in `entropy-watch`
+  (comp #(println (ZonedDateTime/now) ":" (seq %)) ;; same consumer-fn used in `entropy-watch`
         cached-entropy))
 
 (process-entropy) ;; call it once to calculate when the next-refresh will be and block until then
 ```
-You can now call `process-entropy` as frequently as you want (http-calls will only be made every 30 seconds) -
-understanding of course that most of those calls will return identical values (depending on frequency).
+You can now call `process-entropy` as frequently as you want (http-calls will only be made every 'period' seconds) -
+understanding of course that those calls will return identical values (depending on frequency).
 
 #### _with-http-client_ \[http-client & body\]
-This is just a convenience macro for overriding the default http-client (i.e. `(HttpClient/newHttpClient)`).
+Convenience macro for overriding the default http-client (i.e. `(HttpClient/newHttpClient)`).
 
 ## Requirements
 - Some recent version of Java (>= 11)

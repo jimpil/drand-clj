@@ -61,7 +61,7 @@
 
 ;;=================================================================
 
-(defn- fastest-query
+(defn- fastest-from
   "Asynchronously queries all <urls> (via <api-fn>),
    delivering the first (fastest) response into the promise returned.
    If <timeout-seconds> is exceeded returns `::timeout`."
@@ -91,9 +91,9 @@
 
   impl/IDrand
   (info [_]
-    (fastest-query group-urls timeout-seconds get-info))
+    (fastest-from group-urls timeout-seconds get-info))
   (getPublicRound [_ round]
-    (fastest-query group-urls timeout-seconds (partial get-public-round round)))
+    (fastest-from group-urls timeout-seconds (partial get-public-round round)))
   (roundAt [_ instant]
     (let [{:strs [genesis_time period]} group-info]
       (impl/round-at instant genesis_time period)))
@@ -103,8 +103,7 @@
         impl/find-randomness))
   (entropyWatch [this consume!]
     (let [{:strs [genesis_time period]} group-info
-          callback (bound-fn [] ;; propagate bindings
-                     (consume! (impl/entropyAt this nil)))
+          callback (bound-fn [] (consume! (impl/entropyAt this nil)))
           dlay (impl/next-round-in genesis_time period)]
       (partial future-cancel
                (-> (Executors/newSingleThreadScheduledExecutor)
@@ -115,8 +114,7 @@
   "Returns a new drand client given the provided
    group <urls> and <timeout-seconds>."
   [urls timeout-seconds]
-  (let [group-info (map #(deref (get-info :url % :timeout-seconds timeout-seconds)) urls)]
+  (let [group-info (pmap #(deref (get-info :url % :timeout-seconds timeout-seconds)) urls)]
     (if (apply not= group-info)
-      (throw
-        (IllegalStateException. "Invalid group-info detected!"))
+      (throw (IllegalStateException. "Invalid group-info detected!"))
       (DrandGroupClient. urls (first group-info) timeout-seconds))))

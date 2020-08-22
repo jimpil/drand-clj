@@ -57,7 +57,7 @@
 
 (defn round-at
   "Returns the round (a positive integer) at
-  <instant> (an instance of `java.time.Instant`)."
+  <instant> (a `java.time.Instant`)."
   [drand-client instant]
   (impl/roundAt drand-client instant))
 
@@ -83,11 +83,11 @@
     (process-entropy)"
   [drand-client f]
   (let [{:strs [genesis_time period]} (:group-info drand-client)
-        initial-dlay (promise)
+        delay? (volatile! true)
         delay-wrapped (fn [& args]
-                        (when-not (realized? initial-dlay)
+                        (when @delay?
                           (let [dlay (impl/next-round-in genesis_time period)]
-                            (deliver initial-dlay dlay)
+                            (vswap! delay? false)
                             (Thread/sleep (* 1000 dlay))))
                         (apply f drand-client args))]
     (memoize/ttl delay-wrapped :ttl/threshold (* 1000 period))))
