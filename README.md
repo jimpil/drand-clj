@@ -83,7 +83,7 @@ You want to consume entropy, but you want to be the one who drives it (i.e. `ent
 
 ```clj
 (def cached-entropy
-  (drand/with-caching loe-client drand/get-entropy))
+  (drand/with-ttl-caching loe-client drand/get-entropy))
 
 (def process-entropy
   (comp #(println (ZonedDateTime/now) ":" (seq %)) ;; same consumer-fn used in `entropy-watch`
