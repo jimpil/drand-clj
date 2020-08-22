@@ -1,12 +1,13 @@
 (ns drand-clj.core
   (:require [drand-clj
              [client :as client]
-             [impl :as impl]
+             [internal :as impl]
              [urls :as urls]]
             [clojure.core.memoize :as memoize])
   (:import (java.security SecureRandom)))
 
-(defonce loe-group ;; league-of-entropy
+(def loe-group
+  "League-Of-Entropy URLs."
   [urls/cloudflare
    urls/protocol-labs1
    urls/protocol-labs2

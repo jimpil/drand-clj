@@ -1,4 +1,4 @@
-(ns drand-clj.impl
+(ns drand-clj.internal
   (:require [drand-clj.urls :as urls]
             [clojure.data.json :as json])
   (:import (java.net.http HttpClient HttpRequest HttpResponse HttpResponse$BodyHandlers HttpTimeoutException)

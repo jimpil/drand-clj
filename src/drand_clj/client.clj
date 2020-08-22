@@ -1,9 +1,8 @@
 (ns drand-clj.client
-  (:require [drand-clj.impl :as impl]
+  (:require [drand-clj.internal :as impl]
             [drand-clj.urls :as urls]
             [clojure.core.async :as async])
-  (:import (java.util.concurrent TimeUnit Executors)
-           (clojure.lang Var)))
+  (:import (java.util.concurrent TimeUnit Executors)))
 
 (set! *warn-on-reflection* true)
 
@@ -16,16 +15,15 @@
 ;;INFO
 (def ^:private default-info-request
   (-> urls/cloudflare
-      (impl/info-request  5)
+      (impl/info-request 5)
       delay))
 
-(defn get-info
+(defn get-info*
   "Top-level fn for retrieving `drand` beacon info."
-  [& {:keys [url timeout-seconds http-request response-handler]}]
+  [& {:keys [url timeout-seconds response-handler]}]
    (let [[ret-promise handler] (async-handler response-handler)]
      (impl/send-request!
-       (or http-request
-           (some-> url (impl/info-request timeout-seconds))
+       (or (some-> url (impl/info-request timeout-seconds))
            @default-info-request)
        handler)
      ret-promise))
@@ -36,17 +34,16 @@
       (impl/public-latest-request 5)
       delay))
 
-(defn get-public
+(defn get-public*
   ""
-  [& {:keys [url timeout-seconds http-request response-handler]}]
+  [& {:keys [url timeout-seconds response-handler]}]
   (let [[ret-promise handler] (async-handler response-handler)
-        request (or http-request
-                    (some-> url (impl/public-latest-request timeout-seconds))
+        request (or (some-> url (impl/public-latest-request timeout-seconds))
                     @default-public-request)]
     (impl/send-request! request handler)
     ret-promise))
 
-(defn get-public-round
+(defn get-public-round*
   ""
   [round & {:keys [url timeout-seconds response-handler]}]
   (let [[ret-promise handler] (async-handler response-handler)
@@ -55,9 +52,9 @@
     (if request
       (do (impl/send-request! request handler)
           ret-promise)
-      (get-public :url url
-                  :timeout-seconds timeout-seconds
-                  :response-handler response-handler))))
+      (get-public* :url url
+                   :timeout-seconds timeout-seconds
+                   :response-handler response-handler))))
 
 ;;=================================================================
 
@@ -80,9 +77,8 @@
              (async/>! ret-chan))))
 
     (async/go
-      (let [[ret _] (async/alts! [ret-chan (async/timeout timeout-ms)])
-            ret (if (nil? ret) ::timeout ret)]
-        (deliver ret-promise ret)))
+      (let [[ret _] (async/alts! [ret-chan (async/timeout timeout-ms)])]
+        (deliver ret-promise (if (nil? ret) ::timeout ret))))
 
     ret-promise))
 
@@ -91,9 +87,9 @@
 
   impl/IDrand
   (info [_]
-    (fastest-from group-urls timeout-seconds get-info))
+    (fastest-from group-urls timeout-seconds get-info*))
   (getPublicRound [_ round]
-    (fastest-from group-urls timeout-seconds (partial get-public-round round)))
+    (fastest-from group-urls timeout-seconds (partial get-public-round* round)))
   (roundAt [_ instant]
     (let [{:strs [genesis_time period]} group-info]
       (impl/round-at instant genesis_time period)))
@@ -114,7 +110,7 @@
   "Returns a new drand client given the provided
    group <urls> and <timeout-seconds>."
   [urls timeout-seconds]
-  (let [group-info (pmap #(deref (get-info :url % :timeout-seconds timeout-seconds)) urls)]
+  (let [group-info (pmap #(deref (get-info* :url % :timeout-seconds timeout-seconds)) urls)]
     (if (apply not= group-info)
       (throw (IllegalStateException. "Invalid group-info detected!"))
       (DrandGroupClient. urls (first group-info) timeout-seconds))))

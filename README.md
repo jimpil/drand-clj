@@ -98,11 +98,18 @@ Convenience macro for overriding the default http-client (i.e. `(HttpClient/newH
 
 #### _strong-random_ \[entropy\]
 Returns the strongest possible instance of `SecureRandom` (on the running platform) 
-with 32 bytes of _added_ <entropy> (supplementing its own seed).
+with 32 bytes of added <entropy> (_supplementing its own seed_).
 
 ```clj
 (drand/strong-random (drand/get-entropy loe-client)) ;; => #object[java.security.SecureRandom 0x680f108e "Blocking"]
 ```
+
+### drand-clj.client
+If for some reason you want a lower-level API that doesn't require a client object,
+this namespace will be useful. Functions like `get-info*`, `get-public*` and `get-public-round*`
+expect named arguments `:url`/`:timeout-seconds`. Bypassing the client object like this, obviously
+means no group-info validation (there is no group at this level - just a URL), 
+but also no `core.async` involvement (the promise will be delivered straight from the async http-handler).
 
 ## Requirements
 - Some recent version of Java (>= 11)
