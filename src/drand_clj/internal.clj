@@ -104,7 +104,7 @@
 (defn round-at
   [^Instant i genesis period]
   (let [epoch-seconds (.getEpochSecond i)]
-    (when (>= genesis epoch-seconds)
+    (when (>= epoch-seconds genesis)
       (count
         (range genesis (inc epoch-seconds) period)))))
 
