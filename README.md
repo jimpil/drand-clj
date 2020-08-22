@@ -18,8 +18,8 @@ This is the top-level API for `drand-clj`. It is asynchronous all the way down, 
 
 #### _client-for_ \[urls timeout\]
 You will need a client object as the first argument to all the functions in this namespace.
-This function constructs one given a collection of group <urls>, and a timeout (in seconds - defaults to 5).
-If you haven't setup your own beacons, you can always use the LOE (League-Of-Entropy) ones 
+This function constructs one given a collection of group _urls_, and a _timeout_ (in seconds - defaults to 5).
+If you haven't setup your own beacons, you can always use the **LOE** (_League-Of-Entropy_) ones 
 (this is what the no-arg arity does). 
 
 ```clj
@@ -37,14 +37,14 @@ Queries the `/info` endpoint of each beacon returning the fastest response. The 
 ```
 
 #### _get-public_ \[client round\]
-Queries the `/public/<round>` endpoint of each beacon returning the fastest response. `round` defaults to the latest round.
+Queries the `/public/<round>` endpoint of each beacon returning the fastest response. _round_ defaults to the latest round.
 
 ```clj
 @(drand/get-public loe-client) ;; => map with keys ["round" "randomness" "signature" "previous_signature"]
 ```
 
 #### _get-entropy_ \[client round\]
-Builds on top of `get-public`, extracting the hex-encoded randomness, and decoding it. `round` defaults to the latest round.
+Builds on top of `get-public`, extracting the hex-encoded randomness, and decoding it. _round_ defaults to the latest round.
 Unlike most of the functions in this namespace, this returns a byte-array of 32 elements (not a `Promise`).
 
 ```clj
@@ -52,20 +52,21 @@ Unlike most of the functions in this namespace, this returns a byte-array of 32 
 ```
 
 #### _round-at_ \[client instant\]
-Returns the round of generated randomness at the given <instant> (`java.time.Instant`).
+Returns the round of generated randomness at the given _instant_ (`java.time.Instant`).
 
 ```clj
 (drand/round-at loe-client (Instant/now)) ;; => a positive integer 
 ```
 
 #### _entropy-watch_ \[client watch-fn\]
-Schedules periodic consumption of entropy (via `watch-fn`). Returns a no-arg fn to un-schedule.
+Schedules periodic consumption of entropy (via _watch-fn_). Returns a no-arg fn to un-schedule.
 Consumption does NOT start immediately, but on the next refresh, and every 'period' (see `get-info`) seconds. 
 
 ```clj
 (def unwatch!
   (drand/entropy-watch loe-client #(println (ZonedDateTime/now) ":" (seq %))))
 ;; you should start seeing print-outs shortly (less than 30 seconds) 
+;; visually confirm correct synchronization against the UI at https://drand.love/ 
 
 (unwatch!) ;; => true
 ;; there should be no more print-outs
@@ -73,7 +74,7 @@ Consumption does NOT start immediately, but on the next refresh, and every 'peri
 ```
 
 #### _with-ttl-caching_ \[client api-fn\]
-Memoizes <api-fn> in a TTL (time-to-live) fashion.
+Memoizes _api-fn_ in a TTL (time-to-live) fashion.
 The returned function will block on the very first call (waiting for the next refresh), 
 and start refreshing its cache every 'period' (see `get-info`) seconds thereafter.
 
@@ -94,11 +95,11 @@ You can now call `process-entropy` as frequently as you want (http-calls will on
 understanding of course that those calls will return identical values (depending on frequency).
 
 #### _with-http-client_ \[http-client & body\]
-Convenience macro for overriding the default http-client (i.e. `(HttpClient/newHttpClient)`).
+Convenience macro for overriding the default _http-client_ (i.e. `(HttpClient/newHttpClient)`).
 
 #### _strong-random_ \[entropy\]
 Returns the strongest possible instance of `SecureRandom` (on the running platform) 
-with 32 bytes of added <entropy> (_supplementing its own seed_).
+with 32 bytes of added _entropy_ (supplementing its own seed).
 
 ```clj
 (drand/strong-random (drand/get-entropy loe-client)) ;; => #object[java.security.SecureRandom 0x680f108e "Blocking"]
